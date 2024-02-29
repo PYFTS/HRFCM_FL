@@ -17,21 +17,23 @@ class FCM_FTS(hofts.HighOrderFTS):
 
         self.loss_function = kwargs.get('loss', lossFunction.func)
 
-        for k in range(self.num_fcms):
-          fcm_tmp = FuzzyCognitiveMap(**kwargs)
-          weights = np.random.uniform(-1, 1, size=(self.order,num_concepts, num_concepts))
-          specturalradius1=np.max(np.abs(np.linalg.eigvals(weights)))
-          fcm_tmp.weights = weights*0.5/specturalradius1
-          bias = np.random.uniform(-1, 1, size=(self.order,num_concepts))
-          U,S,VT=svd(bias)
-          specturalradius2=np.max(S)
-          fcm_tmp.bias=bias*0.5/specturalradius2
-          self.fcm.append(fcm_tmp)
+        if kwargs.get('param', True):
+
+            for k in range(self.num_fcms):
+                fcm_tmp = FuzzyCognitiveMap(**kwargs)
+                weights = np.random.uniform(-1, 1, size=(self.order,num_concepts, num_concepts))
+                specturalradius1=np.max(np.abs(np.linalg.eigvals(weights)))
+                fcm_tmp.weights = weights*0.5/specturalradius1
+                bias = np.random.uniform(-1, 1, size=(self.order,num_concepts))
+                U,S,VT=svd(bias)
+                specturalradius2=np.max(S)
+                fcm_tmp.bias=bias*0.5/specturalradius2
+                self.fcm.append(fcm_tmp)
 
 
-        # Coefficients
-        #self.theta = np.zeros(self.num_fcms + 1)
-        self.theta = np.random.rand(self.num_fcms + 1)
+            # Coefficients
+            #self.theta = np.zeros(self.num_fcms + 1)
+            self.theta = np.random.rand(self.num_fcms + 1)
 
     def forecast(self, data, **kwargs):
         y1 = []
@@ -98,6 +100,8 @@ class FCM_FTS(hofts.HighOrderFTS):
 
     def get_parameters(self):
         parameters = []
+        parameters.append(self.original_min) # Original max and min are going to be shared every round, but the values are always the same (min(min) and max(max))
+        parameters.append(self.original_max)
         for l,fcm in enumerate(self.fcm):
             #parameters['weights'] = fcm.weights
             parameters.append(fcm.weights)
@@ -112,9 +116,16 @@ class FCM_FTS(hofts.HighOrderFTS):
     def set_parameters(self, parameters):
         #print('Set Parameters:')
         #print(parameters)
+        self.original_min = parameters[0]
+        self.original_max = parameters[1] 
         for l,fcm in enumerate(self.fcm):
-            fcm.weights = parameters[l*2]
-            fcm.bias = parameters[l*2+1]
+            fcm.weights = parameters[2+l*2]
+            fcm.bias = parameters[2+(l*2+1)]
         self.theta = parameters[-1]
 
+    def getMinMax(self):
+        print("Minimum value:")
+        print(self.original_min)
+        print("Maximum value:")
+        print(self.original_max)
     #def evaluate(self, test):
