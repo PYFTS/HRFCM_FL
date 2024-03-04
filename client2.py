@@ -41,51 +41,62 @@ partitioner = Grid.GridPartitioner(data=clients[cid], npart=3, mf=mf.trimf)
 train = clients[cid][:6400]
 test = clients[cid][6400:]
 
-model = FCM_FTS.FCM_FTS(partitioner=partitioner, order=2, num_fcms=2,
-                  activation_function=Activations.relu,
-                  loss=lossFunction.func,
-                  param=True)
+
 
 #parameters = model.get_parameters()
 #%%
 # Define Flower client
 
 class Client(fl.client.NumPyClient):
-    #def __init__(self, parameters):
+    def __init__(self):
     #    self.parameters = parameters
 
+        self.model = FCM_FTS.FCM_FTS(partitioner=partitioner, order=2, num_fcms=2,
+                        activation_function=Activations.relu,
+                        loss=lossFunction.func,
+                        param=True)
+
     def get_parameters(self, config):
-        print("=========================== Entrou ==================================")
-        return model.get_parameters()
+        #print("=========================== Entrou ==================================")
+        return self.model.get_parameters()
 
     def fit(self, parameters, config):
         #print("Client: ")
         #print(parameters)
         #print("\n")
-        model.set_parameters(parameters)
-        minMaxData = np.array([parameters[0], parameters[1]])
         print("=============================== Min Max =================================")
-        print(model.original_min)
-        print(model.original_max)
+        print("Before")
+        print(parameters[0])
+        print(parameters[1])
+        print(self.model.partitioner.min)
+        print(self.model.partitioner.max)
+
+        self.model.set_parameters(parameters)
+        minMaxData = np.array([parameters[0], parameters[1]])
+        
+        
+        #partitionerFL = Grid.GridPartitioner(data=minMaxData, npart=3, mf=mf.trimf)
+        #self.model.partitioner = partitionerFL
+        self.model.fit(train)
+        print("After")
+        print(self.model.partitioner.min)
+        print(self.model.partitioner.max)
+        print("Partitioner:", self.model.partitioner)
         print("--------------------------------------------------------------------------")
-        partitionerFL = Grid.GridPartitioner(data=minMaxData, npart=3, mf=mf.trimf)
-        model.partitioner = partitionerFL
-        model.fit(clients[cid])
-        print(model.original_min)
-        print(model.original_max)
-        return model.get_parameters(), len(clients[cid]), {}
+        return self.model.get_parameters(), len(clients[cid]), {}
 
     def evaluate(self, parameters, config):
-        model.set_parameters(parameters)
+        self.model.set_parameters(parameters)
         #print(model.get_parameters())
-        forecasted = model.predict(test)
-        _rmse  = Measures.rmse(test, forecasted, model.order-1)
+        forecasted = self.model.predict(test)
+        _rmse  = Measures.rmse(test, forecasted, self.model.order-1)
         x = np.max(test) - np.min(test)
         nrmse = _rmse/x
-        #rmse = model.evaluate(test)
+        #rmse = self.model.evaluate(test)
         print("Client " + str(cid) + ": rmse: " + str(_rmse))
         print("Client " + str(cid) + ": nrmse: " + str(nrmse))
         return nrmse, len(test), {"rmse": _rmse, "nrmse": nrmse}
 
 # Start Flower client
-fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=Client())
+#fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=Client())
+fl.client.start_client(server_address="127.0.0.1:8080", client=Client().to_client())

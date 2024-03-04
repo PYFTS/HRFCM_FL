@@ -1,5 +1,7 @@
 import lossFunction
 from pyFTS.models import hofts
+from pyFTS.partitioners import Grid
+from pyFTS.common import Membership as mf
 from FCM import FuzzyCognitiveMap
 import numpy as np
 from numpy.linalg import svd
@@ -114,10 +116,14 @@ class FCM_FTS(hofts.HighOrderFTS):
         return parameters
     
     def set_parameters(self, parameters):
-        #print('Set Parameters:')
+        print('Set Parameters:')
         #print(parameters)
         self.original_min = parameters[0]
         self.original_max = parameters[1] 
+        minMax = np.array([self.original_min, self.original_max])
+        partitioner = Grid.GridPartitioner(data=minMax, npart=self.partitioner.partitions, mf=mf.trimf)
+        
+        self.partitioner = partitioner
         for l,fcm in enumerate(self.fcm):
             fcm.weights = parameters[2+l*2]
             fcm.bias = parameters[2+(l*2+1)]

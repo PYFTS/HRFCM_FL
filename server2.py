@@ -231,9 +231,9 @@ class HRFTSStrategy(Strategy):
             return None, {}
 
         if self.inplace:
-            print("================= Results ===========================")
-            for _, fit_res in results:
-                print(parameters_to_ndarrays(fit_res.parameters))
+            #print("================= Results ===========================")
+            #for _, fit_res in results:
+            #    print(parameters_to_ndarrays(fit_res.parameters))
                 
             # Does in-place weighted average of results
             minResult = np.inf
@@ -361,9 +361,9 @@ def get_evaluate_fn(testset: testset):
 # Define metric aggregation function
 def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     # Multiply accuracy of each client by number of examples used
-    print("===================================== Metrics =======================================")
-    print(metrics)
-    print("===================================================================================")
+    #print("===================================== Metrics =======================================")
+    #print(metrics)
+    #print("===================================================================================")
     rmse = [num_examples * m["rmse"] for num_examples, m in metrics]
     nrmse = [num_examples * m["nrmse"] for num_examples, m in metrics]
     examples = [num_examples for num_examples, _ in metrics]
@@ -396,6 +396,6 @@ history = fl.server.start_server(
 #print(getDataset.datasetDir)
 #print(history)
 
-print(f"{history.metrics_centralized = }")
+#print(f"{history.metrics_centralized = }")
 
 #plotHistory.plot(history)
