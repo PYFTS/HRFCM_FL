@@ -36,12 +36,11 @@ clients[1] = df2['value'].values[:8000]
 clients[2] = df3['value'].values[:8000]
 #clients[3] = df4['glo_avg'].values[:8000]
 
-partitioner = Grid.GridPartitioner(data=clients[cid], npart=3, mf=mf.trimf)
-
 train = clients[cid][:6400]
 test = clients[cid][6400:]
 
-
+#partitioner = Grid.GridPartitioner(data=clients[cid], npart=3, mf=mf.trimf)
+partitioner = Grid.GridPartitioner(data=train, npart=3, mf=mf.trimf)
 
 #parameters = model.get_parameters()
 #%%

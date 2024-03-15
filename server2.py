@@ -6,12 +6,14 @@
 #    server_address="0.0.0.0:8080",
 #    config=fl.server.ServerConfig(num_rounds=3),
 #)
+import sys
 from logging import WARNING
 from typing import Dict, List, Tuple
 import numpy as np
 import pandas as pd
 from typing import Callable, Dict, List, Optional, Tuple, Union
 import copy
+import plotHistory
 
 import flwr as fl
 from flwr.common import (
@@ -44,24 +46,26 @@ from aggregate_inplace import aggregate_inplace
 NUM_CLIENTS = 3
 numRounds = 3
 
-# Create clients partition
-df1 = pd.read_csv('nrel_DHHL_1.csv')
-df2 = pd.read_csv('nrel_DHHL_2.csv')
-df3 = pd.read_csv('nrel_DHHL_3.csv')
-#df4 = pd.read_csv('https://query.data.world/s/56i2vkijbvxhtv5gagn7ggk3zw3ksi', sep=';')
+# # Create clients partition
+# df1 = pd.read_csv('nrel_DHHL_1.csv')
+# df2 = pd.read_csv('nrel_DHHL_2.csv')
+# df3 = pd.read_csv('nrel_DHHL_3.csv')
+# #df4 = pd.read_csv('https://query.data.world/s/56i2vkijbvxhtv5gagn7ggk3zw3ksi', sep=';')
 
-serverSet = {}
-serverSet[0] = df1['value'].values[8000:10000]
-serverSet[1] = df2['value'].values[8000:10000]
-serverSet[2] = df3['value'].values[8000:10000]
-#clients[3] = df4['glo_avg'].values[:8000]
+# serverSet = {}
+# serverSet[0] = df1['value'].values[8000:10000]
+# serverSet[1] = df2['value'].values[8000:10000]
+# serverSet[2] = df3['value'].values[8000:10000]
+# #clients[3] = df4['glo_avg'].values[:8000]
 
-drawnClient = np.random.randint(0,3)
-testset = serverSet[drawnClient]
+# drawnClient = np.random.randint(0,3)
+# testset = serverSet[drawnClient]
 
 minMax = np.array([0, 1])
 partitioner = Grid.GridPartitioner(data=minMax, npart=3, mf=mf.trimf)
-                  
+
+
+ 
 model = FCM_FTS.FCM_FTS(partitioner=partitioner, order=2, num_fcms=2,
                   activation_function=Activations.relu,
                   loss=lossFunction.func, param=True)
@@ -327,7 +331,6 @@ class HRFTSStrategy(Strategy):
 
         return loss_aggregated, metrics_aggregated
     
-    
 def aggregate_fit(
     server_round: int,
     results: List[Tuple[ClientProxy, FitRes]],
@@ -338,25 +341,25 @@ def aggregate_fit(
             print(fit_res.parameters)
     
 
-def get_evaluate_fn(testset: testset):
-    """Return an evaluation function for server-side (i.e. centralised) evaluation."""
+# def get_evaluate_fn(testset: testset):
+#     """Return an evaluation function for server-side (i.e. centralised) evaluation."""
 
-    # The `evaluate` function will be called after every round by the strategy
-    def evaluate(
-        server_round: int,
-        parameters: fl.common.NDArrays,
-        config: Dict[str, fl.common.Scalar],
-    ):
-        model.set_parameters(parameters)
-        #print(model.get_parameters())
-        forecasted = model.predict(testset)
-        _rmse  = Measures.rmse(testset, forecasted, model.order-1)
-        x = np.max(testset) - np.min(testset)
-        nrmse = _rmse/x
-        #rmse = model.evaluate(test)
-        return nrmse, {"rmse": _rmse, "nrmse": nrmse}
+#     # The `evaluate` function will be called after every round by the strategy
+#     def evaluate(
+#         server_round: int,
+#         parameters: fl.common.NDArrays,
+#         config: Dict[str, fl.common.Scalar],
+#     ):
+#         model.set_parameters(parameters)
+#         #print(model.get_parameters())
+#         forecasted = model.predict(testset)
+#         _rmse  = Measures.rmse(testset, forecasted, model.order-1)
+#         x = np.max(testset) - np.min(testset)
+#         nrmse = _rmse/x
+#         #rmse = model.evaluate(test)
+#         return nrmse, {"rmse": _rmse, "nrmse": nrmse}
     
-    return evaluate
+#     return evaluate
 
 # Define metric aggregation function
 def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
@@ -364,16 +367,19 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     #print("===================================== Metrics =======================================")
     #print(metrics)
     #print("===================================================================================")
+    rmseEachClient = [m["rmse"] for _, m in metrics] 
+    nrmseEachClient = [m["nrmse"] for _, m in metrics] 
     rmse = [num_examples * m["rmse"] for num_examples, m in metrics]
     nrmse = [num_examples * m["nrmse"] for num_examples, m in metrics]
     examples = [num_examples for num_examples, _ in metrics]
-
     # Aggregate and return custom metric (weighted average)
-    return {"rmse":sum(rmse) / sum(examples), "nrmse": sum(nrmse) / sum(examples)}
-
+    return {"rmse":sum(rmse) / sum(examples), 
+            "nrmse": sum(nrmse) / sum(examples),
+            "clientsRMSE":rmseEachClient, "clientsNRMSE":nrmseEachClient}
 
 # Define strategy
-strategy = HRFTSStrategy(initial_parameters=ndarrays_to_parameters(initialParameters))
+strategy = HRFTSStrategy(evaluate_metrics_aggregation_fn=weighted_average,
+                         initial_parameters=ndarrays_to_parameters(initialParameters))
 #strategy = fl.server.strategy.FedAvg(
 #    evaluate_metrics_aggregation_fn=weighted_average,
 #    evaluate_fn=get_evaluate_fn(testset),  # global evaluation function
@@ -385,6 +391,13 @@ strategy = HRFTSStrategy(initial_parameters=ndarrays_to_parameters(initialParame
 #print("Initial Parameters")
 #print(parameters_to_ndarrays(strategy.initial_parameters))
 
+#numberOfExperiments = 3
+
+i = int(sys.argv[1])
+
+print('======================================================================================================')
+print('================================== Experiment ' + str(i+1) + '========================================')
+print('======================================================================================================')
 # Start Flower server
 history = fl.server.start_server(
     server_address="0.0.0.0:8080",
@@ -392,10 +405,10 @@ history = fl.server.start_server(
     #strategy=fl.server.strategy.FedAvg(),
     strategy=strategy,
 )
+    
+plotHistory.plot(history, i)
 
 #print(getDataset.datasetDir)
 #print(history)
 
 #print(f"{history.metrics_centralized = }")
-
-#plotHistory.plot(history)
