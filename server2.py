@@ -235,9 +235,9 @@ class HRFTSStrategy(Strategy):
             return None, {}
 
         if self.inplace:
-            #print("================= Results ===========================")
-            #for _, fit_res in results:
-            #    print(parameters_to_ndarrays(fit_res.parameters))
+            print("================= Results ===========================")
+            for _, fit_res in results:
+                print(parameters_to_ndarrays(fit_res.parameters))
                 
             # Does in-place weighted average of results
             minResult = np.inf
@@ -364,9 +364,10 @@ def aggregate_fit(
 # Define metric aggregation function
 def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     # Multiply accuracy of each client by number of examples used
-    #print("===================================== Metrics =======================================")
+    print("===================================== Metrics =======================================")
     #print(metrics)
     #print("===================================================================================")
+    clientId = [m["Client id"] for _, m in metrics]
     rmseEachClient = [m["rmse"] for _, m in metrics] 
     nrmseEachClient = [m["nrmse"] for _, m in metrics] 
     rmse = [num_examples * m["rmse"] for num_examples, m in metrics]
@@ -375,7 +376,7 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     # Aggregate and return custom metric (weighted average)
     return {"rmse":sum(rmse) / sum(examples), 
             "nrmse": sum(nrmse) / sum(examples),
-            "clientsRMSE":rmseEachClient, "clientsNRMSE":nrmseEachClient}
+            "clientsRMSE":rmseEachClient, "clientsNRMSE":nrmseEachClient, 'ClientId':clientId}
 
 # Define strategy
 strategy = HRFTSStrategy(evaluate_metrics_aggregation_fn=weighted_average,

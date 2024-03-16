@@ -94,7 +94,7 @@ class Client(fl.client.NumPyClient):
         #rmse = self.model.evaluate(test)
         print("Client " + str(cid) + ": rmse: " + str(_rmse))
         print("Client " + str(cid) + ": nrmse: " + str(nrmse))
-        return nrmse, len(test), {"rmse": _rmse, "nrmse": nrmse}
+        return nrmse, len(test), {"rmse": _rmse, "nrmse": nrmse, "Client id": cid}
 
 # Start Flower client
 #fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=Client())

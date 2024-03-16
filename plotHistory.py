@@ -9,10 +9,12 @@ def saveHistory(historyMetric, metricType, i):
     nrmse = [data[1] for data in historyMetric['nrmse']]
     clientRMSE = [data[1] for data in historyMetric['clientsRMSE']]
     clientNRMSE = [data[1] for data in historyMetric['clientsNRMSE']]
+    clientId = [data[1] for data in historyMetric['ClientId']]
     histDict = {}
     histDict['round'] = round
     histDict['rmse'] = rmse
     histDict['nrmse'] = nrmse
+    histDict['ClientId'] = clientId
     histDict['Clients rmse'] = clientRMSE
     histDict['Clients nrmse'] = clientNRMSE
     plt.scatter(round, nrmse)
@@ -24,7 +26,7 @@ def saveHistory(historyMetric, metricType, i):
     #plt.show()
     #print(histDict)
     histDF = pd.DataFrame(histDict)
-    histDF.to_csv('AccHistory' + metricType + '_Exp' + str(i + 1) + '.csv', index = False)
+    histDF.to_csv('ResulsHistory' + metricType + '_Exp' + str(i + 1) + '.csv', index = False)
 
 def plot(history, expNumber):
     print('====================== Hist Metrics =========================')
